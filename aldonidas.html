@@ -93,6 +93,31 @@
 
   /* ── HOME SCREEN ── */
   #screen-home { background: var(--bg); }
+
+  .dir-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .dir-btn {
+    flex: 1;
+    padding: 12px 8px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .dir-btn.active {
+    border-color: var(--accent);
+    background: var(--surface2);
+    color: var(--accent3);
+  }
+  .dir-btn:active { transform: scale(0.97); }
   .home-content {
     flex: 1;
     padding: 8px 16px 32px;
@@ -501,6 +526,83 @@
   .queue-dot.done { background: var(--green); }
   .queue-dot.current { background: var(--accent3); transform: scale(1.3); }
 
+  /* ── LIST BTN ── */
+  .list-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    color: var(--text2);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .list-btn:hover { background: var(--surface2); color: var(--text); }
+  .list-btn:active { transform: scale(0.95); }
+
+  /* ── WORDLIST SCREEN ── */
+  #screen-wordlist { background: var(--bg); }
+  .wordlist-search-wrap {
+    padding: 12px 16px 8px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+  }
+  .wordlist-search {
+    width: 100%;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 1rem;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+    transition: border-color var(--transition);
+  }
+  .wordlist-search:focus { border-color: var(--accent); }
+  .wordlist-search::placeholder { color: var(--text3); }
+  .wordlist-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px 32px;
+  }
+  .wordlist-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    animation: fadeIn 0.15s ease;
+  }
+  .wordlist-item:last-child { border-bottom: none; }
+  .wordlist-pl {
+    font-size: 0.95rem;
+    color: var(--text);
+    flex: 1;
+  }
+  .wordlist-en {
+    font-size: 0.9rem;
+    color: var(--accent3);
+    flex: 1;
+    text-align: right;
+  }
+  .wordlist-mastered {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+  .wordlist-mastered.done { background: var(--green); }
+  .wordlist-empty {
+    text-align: center;
+    color: var(--text3);
+    padding: 40px 16px;
+    font-size: 0.9rem;
+  }
+
   /* ── SUCCESS SCREEN ── */
   #screen-success {
     background: var(--bg);
@@ -690,6 +792,7 @@
       <div class="learn-unit-name" id="learn-unit-name">Unit 9</div>
       <div class="learn-stats" id="learn-stats">Ładowanie...</div>
     </div>
+    <button class="list-btn" id="list-btn">≡ Lista</button>
   </div>
   <div class="progress-bar-wrap">
     <div class="progress-track">
@@ -700,6 +803,21 @@
   <div class="learn-body" id="learn-body">
     <!-- injected dynamically -->
   </div>
+</div>
+
+<!-- ══ WORDLIST SCREEN ══ -->
+<div id="screen-wordlist" class="screen">
+  <div class="learn-header">
+    <button class="back-btn" id="wordlist-back-btn">← Wróć</button>
+    <div class="learn-meta">
+      <div class="learn-unit-name" id="wordlist-unit-name">Słówka</div>
+      <div class="learn-stats" id="wordlist-count"></div>
+    </div>
+  </div>
+  <div class="wordlist-search-wrap">
+    <input class="wordlist-search" id="wordlist-search" type="text" placeholder="Szukaj słówka..." autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+  <div class="wordlist-body" id="wordlist-body"></div>
 </div>
 
 <!-- ══ SUCCESS SCREEN ══ -->
@@ -737,19 +855,19 @@
 //  STATE
 // ═══════════════════════════════════════════════════════
 
+let learnDir = getCookie('aldonidas_dir') || 'en2pl'; // 'en2pl' | 'pl2en'
+
 let state = {
   currentUnit: null,
   words: [],            // [{pl, en}]
-  // per-word status
   wordStatus: {},       // id -> { mcDone, typingDone, streak, mastered }
   queue: [],            // ids of words still in rotation
   currentWordId: null,
   currentPhase: 'mc',   // 'mc' | 'typing'
-  typingDirection: 0,   // alternates: 0=en question(type pl no wait), 1=pl question(type en)
   totalWords: 0,
   masteredCount: 0,
   roundsCompleted: 0,
-  locked: false,        // prevent double-clicks
+  locked: false,
   statsStartTime: null,
 };
 
@@ -1065,20 +1183,24 @@ function renderMC(body, word) {
   const distractors = pickDistractors(state.words, word.id, 3);
   const options = shuffle([word, ...distractors]);
   const phaseLabel = 'Faza 1 · Wybór wielokrotny';
+  const en2pl = learnDir === 'en2pl';
+  const questionText = en2pl ? word.en : word.pl;
+  const questionLabel = en2pl ? 'Co znaczy po polsku?' : 'What does it mean in English?';
+  const correctAnswer = en2pl ? word.pl : word.en;
 
   body.innerHTML = `
     <div class="phase-badge"><span class="phase-dot"></span>${phaseLabel}</div>
     <div class="question-card" id="qcard">
-      <div class="question-label">Co znaczy po polsku?</div>
-      <div class="question-text">${esc(word.en)}</div>
+      <div class="question-label">${questionLabel}</div>
+      <div class="question-text">${esc(questionText)}</div>
     </div>
     <div class="answer-reveal" id="answer-reveal">
       <div class="correct-label">Poprawna odpowiedź</div>
-      <div class="correct-text">${esc(word.pl)}</div>
+      <div class="correct-text">${esc(correctAnswer)}</div>
     </div>
     <div class="mc-options" id="mc-options">
       ${options.map(opt => `
-        <button class="mc-option" data-id="${opt.id}">${esc(opt.pl)}</button>
+        <button class="mc-option" data-id="${opt.id}">${esc(en2pl ? opt.pl : opt.en)}</button>
       `).join('')}
     </div>
     <button class="continue-btn" id="continue-btn">Dalej →</button>
@@ -1120,12 +1242,11 @@ function handleMCAnswer(btn, word) {
 }
 
 function renderTyping(body, word) {
-  // direction: 0 = show EN, type PL; 1 = show PL, type EN
-  const dir = state.typingDirection;
-  const questionText = dir === 0 ? word.en : word.pl;
-  const questionLabel = dir === 0 ? 'Przetłumacz na polski:' : 'Przetłumacz na angielski:';
-  const placeholder = dir === 0 ? 'wpisz po polsku…' : 'type in English…';
-  const correctAnswer = dir === 0 ? word.pl : word.en;
+  const en2pl = learnDir === 'en2pl';
+  const questionText = en2pl ? word.en : word.pl;
+  const questionLabel = en2pl ? 'Przetłumacz na polski:' : 'Przetłumacz na angielski:';
+  const placeholder = en2pl ? 'wpisz po polsku…' : 'type in English…';
+  const correctAnswer = en2pl ? word.pl : word.en;
   const phaseLabel = 'Faza 2 · Wpisywanie';
 
   body.innerHTML = `
@@ -1264,6 +1385,53 @@ document.getElementById('back-btn').addEventListener('click', () => {
 
 
 
+// List button
+document.getElementById('list-btn').addEventListener('click', () => {
+  openWordlist();
+});
+
+document.getElementById('wordlist-back-btn').addEventListener('click', () => {
+  showScreen('screen-learn');
+});
+
+function openWordlist() {
+  document.getElementById('wordlist-unit-name').textContent =
+    document.getElementById('learn-unit-name').textContent + ' – słówka';
+  document.getElementById('wordlist-search').value = '';
+  renderWordlist('');
+  showScreen('screen-wordlist');
+  setTimeout(() => document.getElementById('wordlist-search').focus(), 150);
+}
+
+function renderWordlist(query) {
+  const body = document.getElementById('wordlist-body');
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? state.words.filter(w => w.pl.toLowerCase().includes(q) || w.en.toLowerCase().includes(q))
+    : state.words;
+
+  document.getElementById('wordlist-count').textContent =
+    filtered.length + ' / ' + state.words.length + ' słówek';
+
+  if (filtered.length === 0) {
+    body.innerHTML = '<div class="wordlist-empty">Brak wyników dla "' + esc(query) + '"</div>';
+    return;
+  }
+
+  body.innerHTML = filtered.map(w => {
+    const mastered = state.wordStatus[w.id] && state.wordStatus[w.id].mastered;
+    return `<div class="wordlist-item">
+      <span class="wordlist-pl">${esc(w.pl)}</span>
+      <span class="wordlist-en">${esc(w.en)}</span>
+      <span class="wordlist-mastered${mastered ? ' done' : ''}"></span>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('wordlist-search').addEventListener('input', (e) => {
+  renderWordlist(e.target.value);
+});
+
 // Success screen buttons
 document.getElementById('success-restart-btn').addEventListener('click', () => {
   // restart the same unit
@@ -1282,6 +1450,17 @@ document.getElementById('success-home-btn').addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════
 
 initHome();
+
+// Direction toggle
+document.querySelectorAll('.dir-btn').forEach(btn => {
+  if (btn.dataset.dir === learnDir) btn.classList.add('active');
+  else btn.classList.remove('active');
+  btn.addEventListener('click', () => {
+    learnDir = btn.dataset.dir;
+    setCookie('aldonidas_dir', learnDir, 365);
+    document.querySelectorAll('.dir-btn').forEach(b => b.classList.toggle('active', b === btn));
+  });
+});
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

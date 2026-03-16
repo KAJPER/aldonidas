@@ -80,8 +80,8 @@ ton, tonacja	pitch
 fałszujący, rozstrojony	off-key
 zagrać ze słuchu	play by ear
 czytać nuty	read music
-nagrywać	record
-płyta, album	record
+nagrywać	record (v)
+płyta, album	record (n)
 partytura	score
 śpiewać czysto/fałszować	sing in/out of tune
 być na szczytach list przebojów	top the charts
@@ -180,7 +180,7 @@ niepokojący	disturbing/unsettling
 wciągający	engaging/gripping/engrossing
 przyciągający wzrok	eye-catching
 naciągany	far-fetched
-heartwarming	podnoszący na duchu
+podnoszący na duchu	heartwarming
 nudny, trudny do przejścia	heavy-going
 przezabawny	hilarious
 lekki, żartobliwy	light-hearted
