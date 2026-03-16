@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Aldonidas - Nauka Słówek</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7c5cbf">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aldonidas">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { overflow-x: hidden; }
+
+  :root {
+    --bg:        #0f0f1a;
+    --bg2:       #1a1a2e;
+    --bg3:       #16213e;
+    --surface:   #1e1e35;
+    --surface2:  #252542;
+    --border:    #2e2e52;
+    --accent:    #7c5cbf;
+    --accent2:   #9b7de8;
+    --accent3:   #b49df5;
+    --text:      #e8e8f5;
+    --text2:     #9999bb;
+    --text3:     #6666aa;
+    --green:     #2dcc8f;
+    --green-bg:  #1a3d2f;
+    --red:       #e05a5a;
+    --red-bg:    #3d1a1a;
+    --yellow:    #f0c040;
+    --radius:    14px;
+    --radius-sm: 8px;
+    --shadow:    0 8px 32px rgba(0,0,0,0.5);
+    --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  body { display: flex; flex-direction: column; min-height: 100vh; width: 100%; }
+
+  /* ── SCREENS ── */
+  .screen {
+    display: none;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    animation: fadeIn 0.3s ease;
+  }
+  .screen.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── HEADER ── */
+  .app-header {
+    padding: 20px 20px 12px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--bg2) 0%, transparent 100%);
+    width: 100%;
+  }
+  .app-logo {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent2), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
+  .app-tagline {
+    font-size: 0.82rem;
+    color: var(--text3);
+    margin-top: 2px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── HOME SCREEN ── */
+  #screen-home { background: var(--bg); }
+  .home-content {
+    flex: 1;
+    padding: 8px 16px 32px;
+    overflow-y: auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin: 24px 0 12px 4px;
+  }
+
+  .units-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    width: 100%;
+  }
+
+  .unit-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .unit-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .unit-btn:hover::before, .unit-btn:active::before { opacity: 0.15; }
+  .unit-btn:active { transform: scale(0.96); }
+
+  .unit-btn .unit-num {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent3);
+    position: relative;
+  }
+  .unit-btn .unit-label {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--text3);
+    margin-top: 3px;
+    position: relative;
+  }
+  .unit-btn.loading .unit-num { opacity: 0.4; }
+  .unit-btn.unavailable {
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .unit-btn.has-progress::after {
+    content: '';
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+
+
+
+  /* ── LEARN SCREEN ── */
+  #screen-learn {
+    background: var(--bg);
+  }
+
+  .learn-header {
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .back-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    color: var(--text2);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .back-btn:hover { background: var(--surface2); color: var(--text); }
+  .back-btn:active { transform: scale(0.95); }
+
+  .learn-meta {
+    flex: 1;
+    min-width: 0;
+  }
+  .learn-unit-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .learn-stats {
+    font-size: 0.72rem;
+    color: var(--text3);
+    margin-top: 1px;
+  }
+
+  /* Progress bar */
+  .progress-bar-wrap {
+    padding: 0 16px 12px;
+    background: var(--bg2);
+  }
+  .progress-track {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    min-width: 0;
+  }
+  .progress-pct {
+    font-size: 0.7rem;
+    color: var(--text3);
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  /* Question card */
+  .learn-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 16px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .phase-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent3);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    align-self: flex-start;
+  }
+  .phase-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+  }
+  .question-label {
+    font-size: 0.72rem;
+    color: var(--text3);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .question-text {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .question-sub {
+    font-size: 0.8rem;
+    color: var(--text3);
+    margin-top: 10px;
+    font-style: italic;
+  }
+
+  /* Flash feedback */
+  .question-card.flash-correct {
+    animation: flashGreen 0.5s ease forwards;
+  }
+  .question-card.flash-wrong {
+    animation: flashRed 0.5s ease forwards;
+  }
+  @keyframes flashGreen {
+    0%   { background: var(--surface); border-color: var(--border); }
+    30%  { background: var(--green-bg); border-color: var(--green); }
+    100% { background: var(--surface); border-color: var(--border); }
+  }
+  @keyframes flashRed {
+    0%   { background: var(--surface); border-color: var(--border); }
+    30%  { background: var(--red-bg); border-color: var(--red); }
+    100% { background: var(--surface); border-color: var(--border); }
+  }
+
+  /* Answer reveal */
+  .answer-reveal {
+    background: var(--red-bg);
+    border: 1px solid var(--red);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    color: var(--text2);
+    display: none;
+  }
+  .answer-reveal.visible { display: block; animation: fadeIn 0.2s ease; }
+  .answer-reveal .correct-label {
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--red);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .answer-reveal .correct-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Multiple choice options */
+  .mc-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .mc-option {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    font-size: 1rem;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: all var(--transition);
+    line-height: 1.35;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  .mc-option::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .mc-option:hover::after, .mc-option:active::after { opacity: 0.08; }
+  .mc-option:hover { border-color: var(--accent); }
+  .mc-option:active { transform: scale(0.98); }
+  .mc-option.correct {
+    border-color: var(--green);
+    background: var(--green-bg);
+    color: var(--green);
+    pointer-events: none;
+  }
+  .mc-option.wrong {
+    border-color: var(--red);
+    background: var(--red-bg);
+    color: var(--red);
+    pointer-events: none;
+  }
+  .mc-option.disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  /* Typing input */
+  .typing-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .typing-input {
+    width: 100%;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    font-size: 1.1rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color var(--transition);
+    font-family: inherit;
+  }
+  .typing-input:focus {
+    border-color: var(--accent);
+  }
+  .typing-input.correct {
+    border-color: var(--green);
+    background: var(--green-bg);
+    color: var(--green);
+  }
+  .typing-input.wrong {
+    border-color: var(--red);
+    background: var(--red-bg);
+    color: var(--red);
+  }
+  .typing-input::placeholder { color: var(--text3); }
+
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: var(--radius);
+    color: white;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .submit-btn:active { transform: scale(0.97); }
+  .submit-btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .continue-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    -webkit-tap-highlight-color: transparent;
+    display: none;
+  }
+  .continue-btn.visible {
+    display: block;
+    animation: fadeIn 0.2s ease;
+  }
+  .continue-btn:hover { background: var(--surface); color: var(--text); }
+  .continue-btn:active { transform: scale(0.97); }
+
+  /* Word queue indicator */
+  .queue-indicator {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 4px;
+  }
+  .queue-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s ease;
+  }
+  .queue-dot.done { background: var(--green); }
+  .queue-dot.current { background: var(--accent3); transform: scale(1.3); }
+
+  /* ── SUCCESS SCREEN ── */
+  #screen-success {
+    background: var(--bg);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 32px 24px;
+  }
+  .success-content {
+    max-width: 400px;
+    width: 100%;
+  }
+  .success-emoji {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    animation: successBounce 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+  @keyframes successBounce {
+    0%, 100% { transform: translateY(0); }
+    20% { transform: translateY(-20px); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-16px); }
+    80% { transform: translateY(-6px); }
+  }
+  .success-title {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--green), #60efb0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+  }
+  .success-subtitle {
+    font-size: 1rem;
+    color: var(--text2);
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+  .success-stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .success-stat-num {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--accent3);
+  }
+  .success-stat-label {
+    font-size: 0.8rem;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+  .success-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .success-restart-btn {
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: var(--radius);
+    color: white;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .success-restart-btn:hover { opacity: 0.9; }
+  .success-home-btn {
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .success-home-btn:hover { background: var(--surface2); color: var(--text); }
+
+  /* confetti dots */
+  .confetti-wrap {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 100;
+    overflow: hidden;
+  }
+  .confetti-dot {
+    position: absolute;
+    border-radius: 50%;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 10px 20px;
+    font-size: 0.88rem;
+    color: var(--text);
+    z-index: 200;
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── LOADER ── */
+  .loader-dots {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    padding: 32px;
+  }
+  .loader-dots span {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: loaderBounce 1s ease-in-out infinite;
+  }
+  .loader-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .loader-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes loaderBounce {
+    0%, 100% { transform: translateY(0); opacity: 0.5; }
+    50% { transform: translateY(-8px); opacity: 1; }
+  }
+
+  /* ── DESKTOP ── */
+  @media (min-width: 600px) {
+    .home-content, .learn-body {
+      max-width: 520px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .question-text { font-size: 1.8rem; }
+    .mc-option { font-size: 1.05rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ HOME SCREEN ══ -->
+<div id="screen-home" class="screen active">
+  <div class="app-header">
+    <div class="app-logo">aldonidas</div>
+    <div class="app-tagline">nauka słówek • learn mode</div>
+  </div>
+  <div class="home-content">
+    <div class="section-label">Kierunek nauki</div>
+    <div class="dir-toggle" id="dir-toggle">
+      <button class="dir-btn active" data-dir="en2pl">Angielski → Polski</button>
+      <button class="dir-btn" data-dir="pl2en">Polski → Angielski</button>
+    </div>
+    <div class="section-label">Wybierz unit</div>
+    <div class="units-grid" id="units-grid">
+      <div class="loader-dots"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LEARN SCREEN ══ -->
+<div id="screen-learn" class="screen">
+  <div class="learn-header">
+    <button class="back-btn" id="back-btn">← Wróć</button>
+    <div class="learn-meta">
+      <div class="learn-unit-name" id="learn-unit-name">Unit 9</div>
+      <div class="learn-stats" id="learn-stats">Ładowanie...</div>
+    </div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="progress-pct" id="progress-pct">0% opanowanych</div>
+  </div>
+  <div class="learn-body" id="learn-body">
+    <!-- injected dynamically -->
+  </div>
+</div>
+
+<!-- ══ SUCCESS SCREEN ══ -->
+<div id="screen-success" class="screen">
+  <div class="confetti-wrap" id="confetti-wrap"></div>
+  <div class="success-content">
+    <div class="success-emoji">🎉</div>
+    <div class="success-title">Gratulacje!</div>
+    <div class="success-subtitle" id="success-subtitle">Opanowałeś wszystkie słówka z tego unitu!</div>
+    <div class="success-stat">
+      <div class="success-stat-num" id="success-words">0</div>
+      <div class="success-stat-label">słówek opanowanych</div>
+    </div>
+    <div class="success-stat">
+      <div class="success-stat-num" id="success-rounds">0</div>
+      <div class="success-stat-label">rund ukończonych</div>
+    </div>
+    <div class="success-btns">
+      <button class="success-restart-btn" id="success-restart-btn">🔄 Ucz się ponownie</button>
+      <button class="success-home-btn" id="success-home-btn">🏠 Strona główna</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════
+
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+
+let state = {
+  currentUnit: null,
+  words: [],            // [{pl, en}]
+  // per-word status
+  wordStatus: {},       // id -> { mcDone, typingDone, streak, mastered }
+  queue: [],            // ids of words still in rotation
+  currentWordId: null,
+  currentPhase: 'mc',   // 'mc' | 'typing'
+  typingDirection: 0,   // alternates: 0=en question(type pl no wait), 1=pl question(type en)
+  totalWords: 0,
+  masteredCount: 0,
+  roundsCompleted: 0,
+  locked: false,        // prevent double-clicks
+  statsStartTime: null,
+};
+
+// ═══════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════
+
+function parseTxt(text) {
+  return text.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.includes('\t'))
+    .map((l, i) => {
+      const [pl, en] = l.split('\t').map(s => s.trim());
+      return { id: i, pl, en };
+    })
+    .filter(w => w.pl && w.en);
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function randFrom(arr, exclude = []) {
+  const pool = arr.filter(x => !exclude.includes(x));
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function pickDistractors(words, correctId, count = 3) {
+  const others = shuffle(words.filter(w => w.id !== correctId));
+  return others.slice(0, count);
+}
+
+function normalise(s) {
+  return s.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function COOKIE_key(unit) { return `aldonidas_progress_${unit}`; }
+
+function setCookie(name, value, days) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax';
+}
+
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function deleteCookie(name) {
+  document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+}
+
+function saveProgress() {
+  if (!state.currentUnit) return;
+  try {
+    setCookie(COOKIE_key(state.currentUnit), JSON.stringify({
+      wordStatus: state.wordStatus,
+      masteredCount: state.masteredCount,
+    }), 365);
+  } catch(e) {}
+}
+
+function loadProgress(unit) {
+  try {
+    const s = getCookie(COOKIE_key(unit));
+    return s ? JSON.parse(s) : null;
+  } catch(e) { return null; }
+}
+
+function hasProgress(unit) {
+  try {
+    const s = getCookie(COOKIE_key(unit));
+    if (!s) return false;
+    const d = JSON.parse(s);
+    return d.masteredCount > 0;
+  } catch(e) { return false; }
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+
+let toastTimer = null;
+function showToast(msg, duration = 2200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ═══════════════════════════════════════════════════════
+//  SCREENS
+// ═══════════════════════════════════════════════════════
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════
+//  HOME – unit buttons
+// ═══════════════════════════════════════════════════════
+
+async function initHome() {
+  const grid = document.getElementById('units-grid');
+  grid.innerHTML = '<div class="loader-dots"><span></span><span></span><span></span></div>';
+
+  const checks = [];
+  for (let n = 1; n <= 15; n++) {
+    checks.push(checkUnit(n));
+  }
+
+  const results = await Promise.all(checks);
+
+  grid.innerHTML = '';
+
+  const available = results
+    .map((exists, i) => ({ exists, n: i + 1 }))
+    .filter(item => item.exists);
+
+  if (available.length === 0) {
+    grid.innerHTML = '<p style="color:var(--text2);font-size:0.9rem;padding:12px 4px;">Brak unitów. Wgraj pliki unit1.txt, unit2.txt... na serwer.</p>';
+    return;
+  }
+
+  available.forEach(({ n }) => {
+    const btn = document.createElement('button');
+    btn.className = 'unit-btn';
+    btn.innerHTML = `<span class="unit-num">${n}</span><span class="unit-label">unit</span>`;
+    if (hasProgress(`unit${n}`)) btn.classList.add('has-progress');
+    btn.addEventListener('click', () => startUnit(`unit${n}`, `Unit ${n}`));
+    grid.appendChild(btn);
+  });
+}
+
+async function checkUnit(n) {
+  try {
+    const r = await fetch(`unit${n}.txt`, { method: 'HEAD' });
+    return r.ok;
+  } catch(e) {
+    return false;
+  }
+}
+
+async function fetchUnit(n) {
+  const r = await fetch(`unit${n}.txt`);
+  if (!r.ok) throw new Error('not found');
+  return r.text();
+}
+
+// ═══════════════════════════════════════════════════════
+//  START SESSION
+// ═══════════════════════════════════════════════════════
+
+function startUnit(unitKey, unitLabel) {
+  fetchUnit(unitKey.replace('unit', '')).then(txt => {
+    launchLearn(unitKey, unitLabel, parseTxt(txt));
+  }).catch(() => showToast('Nie można pobrać pliku'));
+}
+
+function launchLearn(unitKey, unitLabel, words) {
+  if (words.length < 4) {
+    showToast('Za mało słówek (minimum 4)');
+    return;
+  }
+
+  state.currentUnit = unitKey;
+  state.words = words;
+  state.totalWords = words.length;
+  state.masteredCount = 0;
+  state.roundsCompleted = 0;
+  state.statsStartTime = Date.now();
+
+  // init word statuses
+  state.wordStatus = {};
+  words.forEach(w => {
+    state.wordStatus[w.id] = { mcDone: false, typingDone: false, streak: 0, mastered: false };
+  });
+
+  // try load saved progress
+  const saved = loadProgress(unitKey);
+  if (saved && saved.wordStatus) {
+    // merge
+    Object.keys(saved.wordStatus).forEach(id => {
+      if (state.wordStatus[id] !== undefined) {
+        state.wordStatus[id] = saved.wordStatus[id];
+        if (state.wordStatus[id].mastered) state.masteredCount++;
+      }
+    });
+  }
+
+  // build queue: not mastered words, first mc phase
+  rebuildQueue();
+
+  document.getElementById('learn-unit-name').textContent = unitLabel;
+  showScreen('screen-learn');
+  renderQuestion();
+}
+
+function rebuildQueue() {
+  // Words not yet mastered, shuffled
+  const notMastered = state.words
+    .filter(w => !state.wordStatus[w.id].mastered)
+    .map(w => w.id);
+  state.queue = shuffle(notMastered);
+}
+
+// ═══════════════════════════════════════════════════════
+//  LEARN LOGIC
+// ═══════════════════════════════════════════════════════
+
+function nextWord() {
+  if (state.queue.length === 0) {
+    rebuildQueue();
+    if (state.queue.length === 0) {
+      // All mastered!
+      finishSession();
+      return;
+    }
+    state.roundsCompleted++;
+  }
+  state.currentWordId = state.queue.shift();
+  const ws = state.wordStatus[state.currentWordId];
+  // Determine phase
+  if (!ws.mcDone) {
+    state.currentPhase = 'mc';
+  } else {
+    state.currentPhase = 'typing';
+    state.typingDirection = (state.typingDirection + 1) % 2;
+  }
+  renderQuestion();
+}
+
+function advanceWord(correct) {
+  const id = state.currentWordId;
+  const ws = state.wordStatus[id];
+
+  if (correct) {
+    if (state.currentPhase === 'mc') {
+      ws.mcDone = true;
+      ws.streak = 1;
+      // re-add to queue for typing phase
+      const insertAt = Math.min(state.queue.length, 2 + Math.floor(Math.random() * 3));
+      state.queue.splice(insertAt, 0, id);
+    } else {
+      ws.streak = (ws.streak || 0) + 1;
+      if (ws.streak >= 2) {
+        ws.mastered = true;
+        ws.typingDone = true;
+        state.masteredCount++;
+        saveProgress();
+      } else {
+        // needs one more typing
+        const insertAt = Math.min(state.queue.length, 2 + Math.floor(Math.random() * 3));
+        state.queue.splice(insertAt, 0, id);
+      }
+    }
+  } else {
+    ws.mcDone = false;
+    ws.typingDone = false;
+    ws.streak = 0;
+    // push back further in queue
+    const insertAt = Math.min(state.queue.length, 3 + Math.floor(Math.random() * 4));
+    state.queue.splice(insertAt, 0, id);
+  }
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const pct = state.totalWords > 0
+    ? Math.round((state.masteredCount / state.totalWords) * 100)
+    : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '% opanowanych';
+  const remaining = state.totalWords - state.masteredCount;
+  document.getElementById('learn-stats').textContent =
+    `${state.masteredCount}/${state.totalWords} opanowanych • ${remaining} pozostało`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+
+function renderQuestion() {
+  updateProgress();
+  state.locked = false;
+
+  if (state.currentWordId === null || state.currentWordId === undefined) {
+    nextWord();
+    return;
+  }
+
+  const word = state.words.find(w => w.id === state.currentWordId);
+  if (!word) { nextWord(); return; }
+
+  const body = document.getElementById('learn-body');
+
+  if (state.currentPhase === 'mc') {
+    renderMC(body, word);
+  } else {
+    renderTyping(body, word);
+  }
+}
+
+function renderMC(body, word) {
+  const distractors = pickDistractors(state.words, word.id, 3);
+  const options = shuffle([word, ...distractors]);
+  const phaseLabel = 'Faza 1 · Wybór wielokrotny';
+
+  body.innerHTML = `
+    <div class="phase-badge"><span class="phase-dot"></span>${phaseLabel}</div>
+    <div class="question-card" id="qcard">
+      <div class="question-label">Co znaczy po polsku?</div>
+      <div class="question-text">${esc(word.en)}</div>
+    </div>
+    <div class="answer-reveal" id="answer-reveal">
+      <div class="correct-label">Poprawna odpowiedź</div>
+      <div class="correct-text">${esc(word.pl)}</div>
+    </div>
+    <div class="mc-options" id="mc-options">
+      ${options.map(opt => `
+        <button class="mc-option" data-id="${opt.id}">${esc(opt.pl)}</button>
+      `).join('')}
+    </div>
+    <button class="continue-btn" id="continue-btn">Dalej →</button>
+  `;
+
+  body.querySelectorAll('.mc-option').forEach(btn => {
+    btn.addEventListener('click', () => handleMCAnswer(btn, word));
+  });
+  document.getElementById('continue-btn').addEventListener('click', () => {
+    nextWord();
+  });
+}
+
+function handleMCAnswer(btn, word) {
+  if (state.locked) return;
+  state.locked = true;
+
+  const isCorrect = parseInt(btn.dataset.id) === word.id;
+  const qcard = document.getElementById('qcard');
+  const allBtns = document.querySelectorAll('.mc-option');
+
+  allBtns.forEach(b => {
+    if (parseInt(b.dataset.id) === word.id) b.classList.add('correct');
+    else b.classList.add('disabled');
+  });
+
+  if (isCorrect) {
+    btn.classList.add('correct');
+    qcard.classList.add('flash-correct');
+    advanceWord(true);
+    setTimeout(() => nextWord(), 700);
+  } else {
+    btn.classList.add('wrong');
+    qcard.classList.add('flash-wrong');
+    document.getElementById('answer-reveal').classList.add('visible');
+    advanceWord(false);
+    document.getElementById('continue-btn').classList.add('visible');
+  }
+}
+
+function renderTyping(body, word) {
+  // direction: 0 = show EN, type PL; 1 = show PL, type EN
+  const dir = state.typingDirection;
+  const questionText = dir === 0 ? word.en : word.pl;
+  const questionLabel = dir === 0 ? 'Przetłumacz na polski:' : 'Przetłumacz na angielski:';
+  const placeholder = dir === 0 ? 'wpisz po polsku…' : 'type in English…';
+  const correctAnswer = dir === 0 ? word.pl : word.en;
+  const phaseLabel = 'Faza 2 · Wpisywanie';
+
+  body.innerHTML = `
+    <div class="phase-badge"><span class="phase-dot"></span>${phaseLabel}</div>
+    <div class="question-card" id="qcard">
+      <div class="question-label">${questionLabel}</div>
+      <div class="question-text">${esc(questionText)}</div>
+    </div>
+    <div class="answer-reveal" id="answer-reveal">
+      <div class="correct-label">Poprawna odpowiedź</div>
+      <div class="correct-text">${esc(correctAnswer)}</div>
+    </div>
+    <div class="typing-area">
+      <input class="typing-input" id="typing-input" type="text"
+             placeholder="${placeholder}" autocomplete="off" autocorrect="off"
+             autocapitalize="off" spellcheck="false">
+      <button class="submit-btn" id="submit-btn">Sprawdź</button>
+      <button class="continue-btn" id="continue-btn">Dalej →</button>
+    </div>
+  `;
+
+  const input = document.getElementById('typing-input');
+  const submitBtn = document.getElementById('submit-btn');
+  const continueBtn = document.getElementById('continue-btn');
+
+  // Focus input (delay on mobile)
+  setTimeout(() => input.focus(), 120);
+
+  submitBtn.addEventListener('click', () => handleTypingAnswer(input, correctAnswer, word));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (!state.locked) {
+        handleTypingAnswer(input, correctAnswer, word);
+      } else {
+        continueBtn.click();
+      }
+    }
+  });
+  continueBtn.addEventListener('click', () => nextWord());
+}
+
+function handleTypingAnswer(input, correctAnswer, word) {
+  if (state.locked) return;
+
+  const userAnswer = normalise(input.value);
+  if (!userAnswer) return;
+
+  state.locked = true;
+
+  const isCorrect = userAnswer === normalise(correctAnswer);
+  const qcard = document.getElementById('qcard');
+  const submitBtn = document.getElementById('submit-btn');
+  const continueBtn = document.getElementById('continue-btn');
+
+  submitBtn.disabled = true;
+  input.disabled = true;
+
+  if (isCorrect) {
+    input.classList.add('correct');
+    qcard.classList.add('flash-correct');
+    advanceWord(true);
+    setTimeout(() => nextWord(), 800);
+  } else {
+    input.classList.add('wrong');
+    qcard.classList.add('flash-wrong');
+    document.getElementById('answer-reveal').classList.add('visible');
+    advanceWord(false);
+    continueBtn.classList.add('visible');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  FINISH
+// ═══════════════════════════════════════════════════════
+
+function finishSession() {
+  document.getElementById('success-words').textContent = state.masteredCount;
+  document.getElementById('success-rounds').textContent = state.roundsCompleted + 1;
+  document.getElementById('success-subtitle').textContent =
+    `Opanowałeś wszystkie ${state.masteredCount} słówka z ${state.currentUnit || 'tego unitu'}!`;
+
+  // clear saved progress
+  try { deleteCookie(COOKIE_key(state.currentUnit)); } catch(e) {}
+
+  showScreen('screen-success');
+  launchConfetti();
+}
+
+function launchConfetti() {
+  const wrap = document.getElementById('confetti-wrap');
+  wrap.innerHTML = '';
+  const colors = ['#7c5cbf','#9b7de8','#b49df5','#2dcc8f','#f0c040','#e05a5a','#60efb0'];
+  for (let i = 0; i < 60; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'confetti-dot';
+    const size = 6 + Math.random() * 8;
+    dot.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      top:${-20 + Math.random() * 20}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${1.5 + Math.random() * 2}s;
+      animation-delay:${Math.random() * 0.8}s;
+    `;
+    wrap.appendChild(dot);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════════════
+//  EVENT WIRING
+// ═══════════════════════════════════════════════════════
+
+// Back button
+document.getElementById('back-btn').addEventListener('click', () => {
+  saveProgress();
+  showScreen('screen-home');
+  // Refresh progress dots on unit buttons
+  document.querySelectorAll('.unit-btn').forEach((btn, i) => {
+    const unit = `unit${i + 1}`;
+    if (hasProgress(unit)) btn.classList.add('has-progress');
+    else btn.classList.remove('has-progress');
+  });
+});
+
+
+
+// Success screen buttons
+document.getElementById('success-restart-btn').addEventListener('click', () => {
+  // restart the same unit
+  if (state.words.length > 0) {
+    launchLearn(state.currentUnit, document.getElementById('learn-unit-name').textContent, state.words);
+  } else {
+    showScreen('screen-home');
+  }
+});
+document.getElementById('success-home-btn').addEventListener('click', () => {
+  showScreen('screen-home');
+});
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+
+initHome();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
